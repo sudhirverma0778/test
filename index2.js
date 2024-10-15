@@ -1,0 +1,113 @@
+const readline = require('readline');
+const tf = require('@tensorflow/tfjs');
+
+// Set up readline interface for user input
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+// Function to get user inputs for a 9x4 matrix
+function getMatrixInput(iteration, callback) {
+    const matrix = [];
+    let count = 0;
+
+    console.log(`Iteration ${iteration + 1}: Please enter 36 values for a 9x4 matrix:`);
+
+    const askForInput = () => {
+        if (count < 36) { // 9 rows x 4 columns = 36 inputs
+            rl.question(`Enter value for element ${Math.floor(count / 4) + 1},${(count % 4) + 1}: `, (input) => {
+                matrix.push(parseFloat(input));
+                count++;
+                askForInput();
+            });
+        } else {
+            callback(matrix);
+        }
+    };
+    askForInput();
+}
+
+// Function to create and train the model
+async function trainModel(data) {
+    const xs = tf.tensor2d(data, [36, 2]);
+
+    // For demonstration, let's create random outputs for training
+    const ys = tf.randomUniform([9, 20]);
+
+    const model = tf.sequential();
+    model.add(tf.layers.dense({ units: 10, activation: 'relu', inputShape: [4] }));
+    model.add(tf.layers.dense({ units: 20 }));
+
+    model.compile({ optimizer: 'sgd', loss: 'meanSquaredError' });
+
+    await model.fit(xs, ys, { epochs: 100 });
+    return model;
+}
+
+// Function to predict outcomes
+async function predictOutcomes(model) {
+    const input = tf.tensor2d([[...Array(4)].map(() => Math.random())]); // Random input for prediction
+    const prediction = model.predict(input);
+    prediction.print();
+}
+
+// Main function to run the iterations and predictions
+async function main() {
+    const allMatrices = [];
+
+    for (let i = 0; i < 5; i++) {
+        const matrix = await new Promise((resolve) => {
+            getMatrixInput(i, (matrix) => {
+                rl.pause(); // Pause readline to allow for next iteration
+                resolve(matrix);
+            });
+        });
+        allMatrices.push(matrix);
+    }
+	allMatrics = [
+  [
+    1, 1, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 0, 0, 0
+  ],
+  [
+    0, 0, 0, 0, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0
+  ],
+  [
+    0, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 0, 0
+  ],
+  [
+    0, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 1, 1, 1
+  ],
+  [
+    1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1
+  ]
+]
+	console.log("allMatrices", allMatrices);
+
+    // Flatten the matrices and train the model
+    const flattenedData = allMatrices.flat();
+    const model = await trainModel(flattenedData);
+    
+    // Make predictions
+    await predictOutcomes(model);
+
+    // Close readline interface
+    rl.close();
+}
+
+main();
